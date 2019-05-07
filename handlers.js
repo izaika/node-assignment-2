@@ -1,9 +1,13 @@
+const success = data => Promise.resolve({ statusCode: 200, data });
+const error = (statusCode = 500, data) => Promise.resolve({ statusCode, data });
+const notFound = () => Promise.resolve({ statusCode: 404, data: 'Not found' });
+
 /**
  * @type { {[x: string]: () => Promise<{ statusCode: number; data: any }>} }
  */
 const handlers = {
-  welcome: () => Promise.resolve({ statusCode: 200, data: 'Hello world!' }),
-  notFound: () => Promise.resolve({ statusCode: 404, data: 'Not found' }),
+  'get@users': () => success('test'),
+  notFound: () => notFound(),
 };
 
 module.exports = handlers;

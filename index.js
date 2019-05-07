@@ -3,7 +3,6 @@ const path = require('path');
 const https = require('https');
 
 const handlers = require('./handlers');
-const routes = require('./routes');
 const { getRouteString } = require('./utils');
 
 const server = https.createServer(
@@ -17,8 +16,11 @@ const server = https.createServer(
     request.on('data', chunk => (body += chunk));
 
     request.on('end', async () => {
-      const handlerName = routes[getRouteString(request)] || 'notFound';
-      const responseBody = await handlers[handlerName]();
+      const handlerName = getRouteString(request);
+
+      const responseBody = handlers[handlerName]
+        ? await handlers[handlerName]()
+        : await handlers.notFound();
 
       response.setHeader('Content-Type', 'application/json');
       response.writeHead(responseBody.statusCode);
