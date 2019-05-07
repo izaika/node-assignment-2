@@ -19,7 +19,7 @@ const server = https.createServer(
       const handlerName = getRouteString(request);
 
       const responseBody = handlers[handlerName]
-        ? await handlers[handlerName]()
+        ? await handlers[handlerName](request)
         : await handlers.notFound();
 
       response.setHeader('Content-Type', 'application/json');
