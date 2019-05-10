@@ -108,6 +108,36 @@ class ORM {
       });
     });
 
+  update = () =>
+    new Promise((resolve, reject) => {
+      // Open the file for updating
+      fs.open(this._getFilePath(), 'r+', (error, fileDescriptor) => {
+        if (error || !fileDescriptor) {
+          return reject(
+            'Could not open file for updating, it may not exist yet'
+          );
+        }
+
+        // Convert data to string
+        const stringData = JSON.stringify(this._data);
+
+        // Truncate the file
+        fs.truncate(fileDescriptor, error => {
+          if (error) return reject('Error truncating file');
+
+          // Write to file and close it
+          fs.writeFile(fileDescriptor, stringData, error => {
+            if (error) return reject('Error writing to existing file');
+
+            fs.close(fileDescriptor, error => {
+              if (error) return reject('Error closing existing file');
+              resolve();
+            });
+          });
+        });
+      });
+    });
+
   getData = () => this._data;
 }
 
