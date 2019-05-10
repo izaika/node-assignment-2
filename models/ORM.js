@@ -37,7 +37,13 @@ class ORM {
       );
     });
 
-  static getAll = () => {};
+  static getAll = () =>
+    new Promise((resolve, reject) => {
+      fs.readdir(`${this._getDirPath()}/`, (error, data) => {
+        if (error || !data) return reject(error);
+        resolve(data.map(fileName => this.getByFileName(fileName)));
+      });
+    });
 
   /**
    * Name of directory where to store files
@@ -136,6 +142,11 @@ class ORM {
           });
         });
       });
+    });
+
+  delete = () =>
+    new Promise((resolve, reject) => {
+      fs.unlink(this._getFilePath(), e => (e ? reject(e) : resolve()));
     });
 
   getData = () => this._data;
