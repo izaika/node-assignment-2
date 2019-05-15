@@ -7,9 +7,6 @@ const { parseJsonToObject } = require('../utils');
  * @abstract
  */
 class ORM {
-  /** @private */
-  static _baseDir = path.join(__dirname, '/../.data');
-
   /**
    * Read data from a file and return model object
    *
@@ -45,10 +42,13 @@ class ORM {
       });
     });
 
+  /** @private */
+  _baseDir = path.join(__dirname, '/../.data');
+
   /**
    * Name of directory where to store files
    *
-   * @protected
+   * @private
    * @type { string }
    */
   _dirName;
@@ -57,7 +57,7 @@ class ORM {
    * The name of unique parameter of entity which is used
    * for the name of the file
    *
-   * @protected
+   * @private
    * @type { string }
    */
   _primaryKey;
@@ -70,59 +70,72 @@ class ORM {
    */
   _data;
 
-  constructor(data, isNew) {
+  /**
+   * @param { { email: string; name: string; address: string } } data
+   * @param { string } dirName Name of directory where to store files
+   * @param { string } primaryKey The name of unique parameter of entity which is used for the name of the file
+   */
+  constructor(data, dirName, primaryKey) {
     if (new.target === ORM) {
       throw new TypeError('Cannot construct ORM instances directly');
     }
 
     this._data = data;
-    if (isNew) this._create();
+    this._dirName = dirName;
+    this._primaryKey = primaryKey;
   }
 
   /** @private */
-  _getDirPath = () => `${ORM._baseDir}/${this._dirName}`;
+  _getDirPath = () => {
+    const dirPath = `${this._baseDir}/${this._dirName}`;
+
+    // create direcrory if it does not exist yet
+    if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath);
+
+    return dirPath;
+  };
 
   /** @private */
-  _getFilePath = () =>
-    `${this._getDirPath()}/${this._data[this._primaryKey]}.json`;
+  _getFilePath = () => {
+    return `${this._getDirPath()}/${this._data[this._primaryKey]}.json`;
+  };
 
   /**
-   * Creates new entity in DB
-   *
    * @private
+   *
+   * @param { string } message User friendly error message
+   * @param { any } error Error object from catch
+   *
    */
-  _create = () =>
-    new Promise((resolve, reject) => {
-      // Open the file for writing
-      fs.open(this._getFilePath(), 'wx', (error, fileDescriptor) => {
-        if (error || !fileDescriptor) {
-          return reject('Could not create new file, it may already exist');
-        }
+  _error = (error = {}) => ({
+    status: 'fail',
+    data: error,
+  });
 
-        // Convert data to string
-        const stringData = JSON.stringify(this._data);
+  /** @private */
+  _success = () => ({ status: 'success' });
 
-        // Write to file and close it
-        fs.writeFile(fileDescriptor, stringData, error => {
-          if (error) return reject('Error writing to new file');
-
-          fs.close(fileDescriptor, error => {
-            if (error) return reject('Error closing new file');
-            resolve();
-          });
-        });
-      });
-    });
+  /**
+   * Creates new file in storage
+   *
+   * @returns {{status: 'success' | 'fail', data: any}}
+   */
+  create = () => {
+    try {
+      const fileDescriptor = fs.openSync(this._getFilePath(), 'wx');
+      fs.writeFileSync(fileDescriptor, JSON.stringify(this._data));
+      fs.closeSync(fileDescriptor);
+      return this._success();
+    } catch (error) {
+      return this._error(error);
+    }
+  };
 
   update = () =>
     new Promise((resolve, reject) => {
       // Open the file for updating
       fs.open(this._getFilePath(), 'r+', (error, fileDescriptor) => {
-        if (error || !fileDescriptor) {
-          return reject(
-            'Could not open file for updating, it may not exist yet'
-          );
-        }
+        if (error) return reject(error);
 
         // Convert data to string
         const stringData = JSON.stringify(this._data);

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { StringDecoder } = require('string_decoder');
 
 const handlers = require('./handlers');
 const { getRouteString } = require('./utils');
@@ -11,16 +12,22 @@ const server = https.createServer(
     cert: fs.readFileSync(path.join(__dirname, './https/cert.pem')),
   },
   (request, response) => {
-    let body = '';
     request.setEncoding('utf8');
-    request.on('data', chunk => (body += chunk));
 
-    request.on('end', async () => {
+    // Get the payload,if any
+    const decoder = new StringDecoder('utf-8');
+    let body = '';
+
+    request.on('data', chunk => (body += decoder.write(chunk)));
+
+    request.on('end', () => {
+      body += decoder.end();
+
       const handlerName = getRouteString(request);
 
       const responseBody = handlers[handlerName]
-        ? await handlers[handlerName](request)
-        : await handlers.notFound();
+        ? handlers[handlerName](request, JSON.parse(body))
+        : handlers.notFound();
 
       response.setHeader('Content-Type', 'application/json');
       response.writeHead(responseBody.statusCode);

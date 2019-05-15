@@ -1,26 +1,24 @@
 const User = require('./models/User');
 
-const success = data => Promise.resolve({ statusCode: 200, data });
-const error = (statusCode = 500, data) => Promise.resolve({ statusCode, data });
-const notFound = () => Promise.resolve({ statusCode: 404, data: 'Not found' });
+const success = (data = {}) => ({ statusCode: 200, data });
+const fail = (error, statusCode = 500) => ({ statusCode, data: error });
+const notFound = () => ({ statusCode: 404, data: 'Not found' });
 
 /**
- * @type { {[x: string]: (request: Request) => Promise<{ statusCode: number; data: any }>} }
+ * @type { {[x: string]: (request: Request, payload: {[x: string]: any}) => { statusCode: number; data: any }} }
  */
 const handlers = {
-  'get@users': () => success('test'),
-  'post@users': request =>
-    new Promise((resolve, reject) => {
-      resolve({ statusCode: 200, data: 'test' });
-    }),
+  'get@users': () => success(),
+  'post@users': (_, payload) => {
+    const { email, name, address } = payload;
+    const user = new User({ email, name, address });
 
-  // const user = new User({
-  //   email: 'izaika89@gmail.com',
-  //   name: 'Igor Zaika',
-  //   address: 'Kyiv',
-  // });
+    const result = user.create();
+    if (result.status === 'fail') return fail(result.data);
 
-  // console.log(user);
+    return success(user.getData());
+  },
+
   notFound: () => notFound(),
 };
 
