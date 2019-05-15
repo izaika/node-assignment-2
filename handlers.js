@@ -1,8 +1,8 @@
 const User = require('./models/User');
 
 const success = (data = {}) => ({ statusCode: 200, data });
-const fail = (error, statusCode = 500) => ({ statusCode, data: error });
-const notFound = () => ({ statusCode: 404, data: 'Not found' });
+const fail = (data = {}, statusCode = 500) => ({ statusCode, data });
+const notFound = () => fail({ error: 'Not found' }, 404);
 
 /**
  * @type { {[x: string]: (request: Request, payload: {[x: string]: any}) => { statusCode: number; data: any }} }
