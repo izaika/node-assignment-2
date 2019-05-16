@@ -72,16 +72,15 @@ class ORM {
 
   /**
    * @param { { email: string; name: string; address: string } } data
-   * @param { string } dirName Name of directory where to store files
    * @param { string } primaryKey The name of unique parameter of entity which is used for the name of the file
    */
-  constructor(data, dirName, primaryKey) {
+  constructor(data, primaryKey) {
     if (new.target === ORM) {
       throw new TypeError('Cannot construct ORM instances directly');
     }
 
     this._data = data;
-    this._dirName = dirName;
+    this._dirName = `${this.constructor.name.toLowerCase()}s`;
     this._primaryKey = primaryKey;
   }
 

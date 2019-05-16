@@ -5,7 +5,7 @@ class User extends ORM {
    * @param { { email: string; name: string; address: string } } data
    */
   constructor(data) {
-    super(data, 'users', 'email');
+    super(data, 'email');
   }
 }
 
