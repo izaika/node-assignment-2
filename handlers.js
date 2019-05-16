@@ -9,13 +9,27 @@ const notFound = () => fail({ error: 'Not found' }, 404);
  */
 const handlers = {
   'get@users': () => success(),
+
   'post@users': (_, payload) => {
     const { email, name, address } = payload;
+
+    if (!email || !name || !address)
+      return fail('`email`, `name`, `address` fields should not be empty');
+
     const user = new User({ email, name, address });
 
     const result = user.create();
     if (result.status === 'fail') return fail(result.data);
+    return success(user.getData());
+  },
 
+  'put@users': (_, payload) => {
+    if (!payload.email) return fail('`email` field should not be empty');
+
+    const user = new User(payload);
+    const result = user.update();
+
+    if (result.status === 'fail') return fail(result.data);
     return success(user.getData());
   },
 
