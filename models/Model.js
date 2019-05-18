@@ -1,12 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const { parseJsonToObject } = require('../utils');
-
 /**
  * @abstract
  */
-class ORM {
+class Model {
   // static getAll = () =>
   //   new Promise((resolve, reject) => {
   //     fs.readdir(`${this._getDirPath()}/`, (error, data) => {
@@ -48,8 +46,8 @@ class ORM {
    * @param { string } primaryKey The name of unique parameter of entity which is used for the name of the file
    */
   constructor(data, primaryKey) {
-    if (new.target === ORM) {
-      throw new TypeError('Cannot construct ORM instances directly');
+    if (new.target === Model) {
+      throw new TypeError('Cannot construct Model instances directly');
     }
 
     this._data = data;
@@ -127,12 +125,16 @@ class ORM {
     }
   };
 
-  delete = () =>
-    new Promise((resolve, reject) => {
-      fs.unlink(this._getFilePath(), e => (e ? reject(e) : resolve()));
-    });
+  delete = () => {
+    try {
+      fs.unlinkSync(this._getFilePath());
+      return this._success();
+    } catch (error) {
+      return this._error(error);
+    }
+  };
 
   getData = () => this._data;
 }
 
-module.exports = ORM;
+module.exports = Model;

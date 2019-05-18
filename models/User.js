@@ -1,6 +1,6 @@
-const ORM = require('./ORM');
+const Model = require('./Model');
 
-class User extends ORM {
+class User extends Model {
   /**
    * @param {{ email: string; name?: string; address?: string }} data
    */
