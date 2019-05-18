@@ -5,14 +5,6 @@ const path = require('path');
  * @abstract
  */
 class Model {
-  // static getAll = () =>
-  //   new Promise((resolve, reject) => {
-  //     fs.readdir(`${this._getDirPath()}/`, (error, data) => {
-  //       if (error || !data) return reject(error);
-  //       resolve(data.map(fileName => this.getByFileName(fileName)));
-  //     });
-  //   });
-
   /** @private */
   _baseDir = path.join(__dirname, '/../.data');
 
@@ -66,8 +58,9 @@ class Model {
   };
 
   /** @private */
-  _getFilePath = () => {
-    return `${this._getDirPath()}/${this._data[this._primaryKey]}.json`;
+  _getFilePath = fileName => {
+    return `${this._getDirPath()}/${fileName ||
+      this._data[this._primaryKey]}.json`;
   };
 
   /**
@@ -83,7 +76,7 @@ class Model {
   });
 
   /** @private */
-  _success = () => ({ status: 'success' });
+  _success = data => ({ status: 'success', data });
 
   /**
    * @private
@@ -129,6 +122,31 @@ class Model {
     try {
       fs.unlinkSync(this._getFilePath());
       return this._success();
+    } catch (error) {
+      return this._error(error);
+    }
+  };
+
+  get = () => {
+    try {
+      const data = JSON.parse(fs.readFileSync(this._getFilePath(), 'utf-8'));
+      return this._success(data);
+    } catch (error) {
+      return this._error(error);
+    }
+  };
+
+  getAll = () => {
+    try {
+      const keys = fs
+        .readdirSync(`${this._getDirPath()}`)
+        .map(fileName => fileName.replace('.json', ''));
+
+      return this._success(
+        keys.map(key =>
+          JSON.parse(fs.readFileSync(this._getFilePath(key), 'utf-8'))
+        )
+      );
     } catch (error) {
       return this._error(error);
     }

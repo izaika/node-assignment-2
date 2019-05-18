@@ -4,7 +4,7 @@ const https = require('https');
 const { StringDecoder } = require('string_decoder');
 
 const handlers = require('./handlers');
-const { getRouteString } = require('./utils');
+const { getRouteString, parseJsonToObject } = require('./utils');
 
 const server = https.createServer(
   {
@@ -26,7 +26,7 @@ const server = https.createServer(
       const handlerName = getRouteString(request);
 
       const responseBody = handlers[handlerName]
-        ? handlers[handlerName](request, JSON.parse(body))
+        ? handlers[handlerName](request, parseJsonToObject(body))
         : handlers.notFound();
 
       response.setHeader('Content-Type', 'application/json');
