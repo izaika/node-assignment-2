@@ -97,11 +97,10 @@ class Model {
    *
    * @returns {{status: 'success' | 'fail', data: any}}
    */
-  create = () => {
-    const filePath = this._getFilePath();
-    if (fs.existsSync(filePath)) return this._error('File already exists');
-    return this._save();
-  };
+  create = () =>
+    fs.existsSync(this._getFilePath())
+      ? this._error('File already exists')
+      : this._save();
 
   update = () => {
     const filePath = this._getFilePath();

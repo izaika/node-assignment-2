@@ -1,4 +1,5 @@
 const User = require('./models/User');
+
 const { getQueryParams } = require('./utils');
 
 const success = (data = {}) => ({ statusCode: 200, data });
@@ -15,13 +16,9 @@ const handlers = {
   'get@users': request => {
     const { email } = getQueryParams(request);
 
-    if (email) {
-      const user = new User({ email });
-      return getResponse(user.get());
-    }
-
-    const user = new User();
-    return getResponse(user.getAll());
+    return email
+      ? getResponse(new User({ email }).get())
+      : getResponse(new User().getAll());
   },
 
   'post@users': (_, payload) => {
@@ -30,21 +27,18 @@ const handlers = {
     if (!email || !name || !address)
       return fail('`email`, `name`, `address` fields should not be empty');
 
-    const user = new User({ email, name, address });
-    return getResponse(user.create());
+    return getResponse(new User({ email, name, address }).create());
   },
 
-  'put@users': (_, payload) => {
-    if (!payload.email) return fail('`email` field should not be empty');
-    const user = new User(payload);
-    return getResponse(user.update());
-  },
+  'put@users': (_, payload) =>
+    payload.email
+      ? getResponse(new User(payload).update())
+      : fail('`email` field should not be empty'),
 
-  'delete@users': (_, payload) => {
-    if (!payload.email) return fail('`email` field should not be empty');
-    const user = new User(payload);
-    return getResponse(user.delete());
-  },
+  'delete@users': (_, payload) =>
+    payload.email
+      ? getResponse(new User(payload).delete())
+      : fail('`email` field should not be empty'),
 
   notFound: () => notFound(),
 };
