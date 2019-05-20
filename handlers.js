@@ -1,6 +1,6 @@
 const User = require('./models/User');
 
-const { getQueryParams } = require('./utils');
+const { getQueryParams, hashStr } = require('./utils');
 
 const success = (data = {}) => ({ statusCode: 200, data });
 const fail = (data = {}, statusCode = 500) => ({ statusCode, data });
@@ -16,21 +16,30 @@ const handlers = {
   'get@users': request => {
     const { email } = getQueryParams(request);
 
+    // @TODO: remove passwords and tokens
     return email
       ? getResponse(new User({ email }).get())
       : getResponse(new User().getAll());
   },
 
   'post@users': (_, payload) => {
-    const { email, name, address } = payload;
+    const { email, password, name, address } = payload;
 
-    if (!email || !name || !address)
+    if (!email || !password || !name || !address)
       return fail('`email`, `name`, `address` fields should not be empty');
 
-    return getResponse(new User({ email, name, address }).create());
+    const hashedPassword = hashStr(password);
+
+    // @TODO: create token and return it
+
+    return getResponse(
+      new User({ email, hashedPassword, name, address }).create()
+    );
   },
 
   'put@users': (_, payload) =>
+    // @TODO: token can't be changed directly
+
     payload.email
       ? getResponse(new User(payload).update())
       : fail('`email` field should not be empty'),
@@ -39,6 +48,19 @@ const handlers = {
     payload.email
       ? getResponse(new User(payload).delete())
       : fail('`email` field should not be empty'),
+
+  'post@logIn': (_, payload) => {
+    const { email, password } = payload;
+
+    if (!email || !password)
+      return fail('`email` and `password` fields should not be empty');
+
+    // find user with email and check password
+
+    // check for tokenId value
+
+    // ...
+  },
 
   notFound: () => notFound(),
 };

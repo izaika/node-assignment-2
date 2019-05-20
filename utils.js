@@ -1,4 +1,7 @@
+const crypto = require('crypto');
 const { parse } = require('url');
+
+const { hashKey } = require('./config');
 
 /**
  * Returns string in format: `httpMethod@path`
@@ -34,8 +37,20 @@ const parseJsonToObject = str => {
  */
 const getQueryParams = request => parse(request.url, true).query;
 
+/**
+ *
+ * @param { string } str String to hash
+ * @returns { string } Hashed string
+ */
+const hashStr = str =>
+  crypto
+    .createHmac('sha256', hashKey)
+    .update(str)
+    .digest('hex');
+
 module.exports = {
   getRouteString,
   parseJsonToObject,
   getQueryParams,
+  hashStr,
 };
