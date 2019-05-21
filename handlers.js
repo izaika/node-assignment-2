@@ -1,10 +1,13 @@
 const User = require('./models/User');
+const Token = require('./models/Token');
 
-const { getQueryParams, hashStr } = require('./utils');
+const { getQueryParams, hashStr, guid } = require('./utils');
 
 const success = (data = {}) => ({ statusCode: 200, data });
 const fail = (data = {}, statusCode = 500) => ({ statusCode, data });
 const notFound = () => fail({ error: 'Not found' }, 404);
+const unautorized = () => fail({ error: 'Unauthorized' }, 401);
+const forbidden = () => fail({ error: 'Forbidden' }, 403);
 
 const getResponse = ({ status, data }) =>
   status === 'fail' ? fail(data) : success(data);
@@ -30,19 +33,26 @@ const handlers = {
 
     const hashedPassword = hashStr(password);
 
-    // @TODO: create token and return it
-
     return getResponse(
       new User({ email, hashedPassword, name, address }).create()
     );
   },
 
-  'put@users': (_, payload) =>
-    // @TODO: token can't be changed directly
+  'put@users': (_, payload) => {
+    if (!payload.email) return fail('`email` field should not be empty');
 
-    payload.email
-      ? getResponse(new User(payload).update())
-      : fail('`email` field should not be empty'),
+    // omit some data from object to save
+    const dataToSave = {
+      password,
+      hashedPassword,
+      tokenId,
+      ...payload,
+    };
+
+    if (payload.password) dataToSave.hashedPassword = hashStr(payload.password);
+
+    return getResponse(new User(dataToSave).update());
+  },
 
   'delete@users': (_, payload) =>
     payload.email
@@ -55,11 +65,38 @@ const handlers = {
     if (!email || !password)
       return fail('`email` and `password` fields should not be empty');
 
-    // find user with email and check password
+    const { status, data } = new User({ email }).get();
 
-    // check for tokenId value
+    // If any kind of error - response with error text
+    if (status === 'fail') return fail(data);
 
-    // ...
+    // Check password
+    if (hashStr(password.toString()) !== data.hashedPassword)
+      return fail('Password is not correct');
+
+    // Check for tokenId value and create it if it does not exists
+    if (data.tokenId) {
+      // @TODO: Check if it exists and not expired
+    } else {
+      // Create new token
+      const tokenId = guid();
+
+      const createTokenResult = new Token({
+        id: tokenId,
+        expires: Date.now() + 1000 * 60 * 60,
+        email,
+      }).create();
+
+      if (createTokenResult.status === 'fail')
+        return fail(createTokenResult.data);
+
+      // update user object with tokenId
+      const updateUserResult = new User({ email, tokenId }).update();
+      if (updateUserResult.status === 'fail')
+        return fail(updateUserResult.data);
+
+      return success(tokenId);
+    }
   },
 
   notFound: () => notFound(),
