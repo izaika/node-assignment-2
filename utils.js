@@ -56,10 +56,24 @@ const s4 = () =>
 const guid = () =>
   `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`;
 
+/**
+ *
+ * @param { object } obj
+ * @param { string[] } propsToOmit
+ *
+ * @returns { object }
+ */
+const omit = (obj, propsToOmit) => {
+  const result = { ...obj };
+  propsToOmit.forEach(prop => (result[prop] = undefined));
+  return result;
+};
+
 module.exports = {
   getRouteString,
   parseJsonToObject,
   getQueryParams,
   hashStr,
   guid,
+  omit,
 };

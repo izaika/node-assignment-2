@@ -1,12 +1,12 @@
 const User = require('./models/User');
 const Token = require('./models/Token');
 
-const { getQueryParams, hashStr, guid } = require('./utils');
+const { getQueryParams, hashStr, guid, omit } = require('./utils');
 
 const success = (data = {}) => ({ statusCode: 200, data });
 const fail = (data = {}, statusCode = 500) => ({ statusCode, data });
 const notFound = () => fail({ error: 'Not found' }, 404);
-const unautorized = () => fail({ error: 'Unauthorized' }, 401);
+const unautorized = message => fail({ error: message || 'Unauthorized' }, 401);
 const forbidden = () => fail({ error: 'Forbidden' }, 403);
 
 const getResponse = ({ status, data }) =>
@@ -17,19 +17,44 @@ const getResponse = ({ status, data }) =>
  */
 const handlers = {
   'get@users': request => {
+    // Move to own function
+    const tokenId = request.headers['x-auth-token'];
+    if (!tokenId) return unautorized();
+    const getTokenResult = new Token({ id: tokenId }).get();
+    if (getTokenResult.status === 'fail') {
+      const { data: error } = getTokenResult;
+      if (error.code === 'ENOENT') return unautorized('Token does not exist');
+      return fail(error);
+    }
+    const { data: tokenData } = getTokenResult;
+    if (tokenData.expires < Date.now()) return unautorized('Token is expired');
+    // ! Move to own function
+
     const { email } = getQueryParams(request);
 
-    // @TODO: remove passwords and tokens
-    return email
-      ? getResponse(new User({ email }).get())
-      : getResponse(new User().getAll());
+    if (!email) return fail('`email` should not be empty');
+
+    const getUserResult = new User({ email }).get();
+
+    if (getUserResult.status === 'fail') {
+      const { data: error } = getUserResult;
+      if (error.code === 'ENOENT') return notFound();
+      return fail(error);
+    }
+
+    const { data: userData } = getUserResult;
+
+    if (tokenData.email !== email || tokenId !== userData.tokenId)
+      return forbidden();
+
+    return success(omit(userData, ['hashedPassword', 'tokenId']));
   },
 
   'post@users': (_, payload) => {
     const { email, password, name, address } = payload;
 
     if (!email || !password || !name || !address)
-      return fail('`email`, `name`, `address` fields should not be empty');
+      return fail('`email`, `password`, `name`, `address` should not be empty');
 
     const hashedPassword = hashStr(password);
 
@@ -39,31 +64,22 @@ const handlers = {
   },
 
   'put@users': (_, payload) => {
-    if (!payload.email) return fail('`email` field should not be empty');
-
-    // omit some data from object to save
-    const dataToSave = {
-      password,
-      hashedPassword,
-      tokenId,
-      ...payload,
-    };
-
+    if (!payload.email) return fail('`email` should not be empty');
+    const dataToSave = omit(payload, ['password', 'hashedPassword', 'tokenId']);
     if (payload.password) dataToSave.hashedPassword = hashStr(payload.password);
-
     return getResponse(new User(dataToSave).update());
   },
 
   'delete@users': (_, payload) =>
     payload.email
       ? getResponse(new User(payload).delete())
-      : fail('`email` field should not be empty'),
+      : fail('`email` should not be empty'),
 
   'post@logIn': (_, payload) => {
     const { email, password } = payload;
 
     if (!email || !password)
-      return fail('`email` and `password` fields should not be empty');
+      return fail('`email` and `password` should not be empty');
 
     const { status, data } = new User({ email }).get();
 
