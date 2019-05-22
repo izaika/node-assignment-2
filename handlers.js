@@ -74,29 +74,26 @@ const handlers = {
     if (hashStr(password.toString()) !== data.hashedPassword)
       return fail('Password is not correct');
 
-    // Check for tokenId value and create it if it does not exists
-    if (data.tokenId) {
-      // @TODO: Check if it exists and not expired
-    } else {
-      // Create new token
-      const tokenId = guid();
+    // Check for tokenId value delete it if exists
+    if (data.tokenId) new Token({ id: data.tokenId }).delete();
 
-      const createTokenResult = new Token({
-        id: tokenId,
-        expires: Date.now() + 1000 * 60 * 60,
-        email,
-      }).create();
+    // Create new token
+    const tokenId = guid();
 
-      if (createTokenResult.status === 'fail')
-        return fail(createTokenResult.data);
+    const createTokenResult = new Token({
+      id: tokenId,
+      expires: Date.now() + 1000 * 60 * 60,
+      email,
+    }).create();
 
-      // update user object with tokenId
-      const updateUserResult = new User({ email, tokenId }).update();
-      if (updateUserResult.status === 'fail')
-        return fail(updateUserResult.data);
+    if (createTokenResult.status === 'fail')
+      return fail(createTokenResult.data);
 
-      return success(tokenId);
-    }
+    // update user object with tokenId
+    const updateUserResult = new User({ email, tokenId }).update();
+    if (updateUserResult.status === 'fail') return fail(updateUserResult.data);
+
+    return success(tokenId);
   },
 
   notFound: () => notFound(),
