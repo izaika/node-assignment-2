@@ -65,7 +65,7 @@ const guid = () =>
  */
 const omit = (obj, propsToOmit) => {
   const result = { ...obj };
-  propsToOmit.forEach(prop => (result[prop] = undefined));
+  propsToOmit.forEach(prop => delete result[prop]);
   return result;
 };
 

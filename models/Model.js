@@ -111,6 +111,7 @@ class Model {
         ...JSON.parse(fs.readFileSync(filePath, 'utf8')),
         ...this._data,
       };
+
       return this._save();
     } catch (error) {
       return this._error(error);

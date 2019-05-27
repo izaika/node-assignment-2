@@ -92,10 +92,26 @@ const handlers = {
     return getResponse(new User(dataToSave).update());
   },
 
-  'delete@users': (_, payload) =>
-    payload.email
-      ? getResponse(new User(payload).delete())
-      : fail('`email` should not be empty'),
+  'delete@users': (request, payload) => {
+    const authData = checkAuth(request);
+    if (!authData.result) return authData.response;
+    const { tokenData } = authData;
+
+    const { email } = getQueryParams(request);
+
+    if (!email) return fail('`email` should not be empty');
+    if (tokenData.email !== email) return forbidden();
+
+    const { status: getUserStatus, data: getUserData } = new User({
+      email,
+    }).get();
+
+    if (getUserStatus === 'fail') return fail(getUserData);
+
+    const { tokenId } = getUserData;
+    new Token({ id: tokenId }).delete();
+    return getResponse(new User({ email }).delete());
+  },
 
   'post@logIn': (_, payload) => {
     const { email, password } = payload;
