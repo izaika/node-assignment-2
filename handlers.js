@@ -13,22 +13,37 @@ const getResponse = ({ status, data }) =>
   status === 'fail' ? fail(data) : success(data);
 
 /**
+ * @param { Request } request
+ * @returns { { result: true; tokenData: { id: string; expires: number; email: string }} | { result: false; response: { statusCode: number; data: any }}}
+ */
+const checkAuth = request => {
+  const tokenId = request.headers['x-auth-token'];
+  if (!tokenId) return { result: false, response: unautorized() };
+
+  const getTokenResult = new Token({ id: tokenId }).get();
+
+  if (getTokenResult.status === 'fail') {
+    const { data: error } = getTokenResult;
+    if (error.code === 'ENOENT')
+      return { result: false, response: unautorized('Token does not exist') };
+
+    return { result: false, response: fail(error) };
+  }
+  const { data: tokenData } = getTokenResult;
+  if (tokenData.expires < Date.now())
+    return { result: false, response: unautorized('Token is expired') };
+
+  return { result: true, tokenData };
+};
+
+/**
  * @type { {[x: string]: (request: Request, payload: {[x: string]: any}) => { statusCode: number; data: any }} }
  */
 const handlers = {
   'get@users': request => {
-    // Move to own function
-    const tokenId = request.headers['x-auth-token'];
-    if (!tokenId) return unautorized();
-    const getTokenResult = new Token({ id: tokenId }).get();
-    if (getTokenResult.status === 'fail') {
-      const { data: error } = getTokenResult;
-      if (error.code === 'ENOENT') return unautorized('Token does not exist');
-      return fail(error);
-    }
-    const { data: tokenData } = getTokenResult;
-    if (tokenData.expires < Date.now()) return unautorized('Token is expired');
-    // ! Move to own function
+    const authData = checkAuth(request);
+    if (!authData.result) return authData.response;
+    const { tokenData } = authData;
 
     const { email } = getQueryParams(request);
 
@@ -44,7 +59,7 @@ const handlers = {
 
     const { data: userData } = getUserResult;
 
-    if (tokenData.email !== email || tokenId !== userData.tokenId)
+    if (tokenData.email !== email || tokenData.id !== userData.tokenId)
       return forbidden();
 
     return success(omit(userData, ['hashedPassword', 'tokenId']));
