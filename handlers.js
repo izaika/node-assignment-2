@@ -78,8 +78,15 @@ const handlers = {
     );
   },
 
-  'put@users': (_, payload) => {
+  'put@users': (request, payload) => {
+    const authData = checkAuth(request);
+    if (!authData.result) return authData.response;
+    const { tokenData } = authData;
+
     if (!payload.email) return fail('`email` should not be empty');
+
+    if (tokenData.email !== payload.email) return forbidden();
+
     const dataToSave = omit(payload, ['password', 'hashedPassword', 'tokenId']);
     if (payload.password) dataToSave.hashedPassword = hashStr(payload.password);
     return getResponse(new User(dataToSave).update());
